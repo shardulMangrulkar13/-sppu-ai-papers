@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+
+backend/chroma_db/
+backend/data/pyqs/
+backend/uploads/
+
+*.zip
+
+frontend/node_modules/
+frontend/dist/
+
+.DS_Store
+backend/.env

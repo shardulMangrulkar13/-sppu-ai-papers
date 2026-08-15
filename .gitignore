@@ -1,15 +1,21 @@
+cat >> .gitignore <<'EOF'
+
+# Python cache
 __pycache__/
-*.pyc
-*.pyo
 
-backend/chroma_db/
-backend/data/pyqs/
+# Local uploads
+uploads/
 backend/uploads/
-
-*.zip
-
-frontend/node_modules/
-frontend/dist/
-
+EOF
+# Local files - NEVER upload
 .DS_Store
+*.zip
+.env
 backend/.env
+chroma_db/
+backend/chroma_db/
+data/
+backend/data/
+uploads/
+backend/uploads/
+__pycache__/

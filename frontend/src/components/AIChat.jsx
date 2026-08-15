@@ -1,200 +1,270 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Bot, Send, Loader2, Copy, Trash2 } from "lucide-react";
 
-const API = "http://127.0.0.1:8000";
+import { Bot, Send, Loader2, Copy, Trash2, Sparkles } from "lucide-react";
 
-export default function AIChat() {
+const API = "https://sppu-ai-backend-304115043483.asia-south1.run.app";
+
+function AIChat() {
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [sources, setSources] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const textareaRef = useRef(null);
-  const answerRef = useRef(null);
-
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    answerRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, [answer]);
+  const messagesEndRef = useRef(null);
 
   const suggestions = [
     "Important DBMS Questions",
-    "Computer Network repeated topics",
     "Explain TOC Unit 3",
-    "Java Viva Questions",
+    "Computer Network Viva",
+    "Java Repeated Questions",
   ];
 
-  async function askAI(text = question) {
-  if (!text.trim()) return;
-
-  try {
-    setLoading(true);
-    setAnswer("");
-    setSources([]);
-
-    const res = await axios.post(`${API}/ask`, {
-      question: text,
+  // Auto scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
     });
+  }, [messages, loading]);
 
-    if (typeof res.data === "string") {
-      setAnswer(res.data);
-      setSources([]);
-    } else {
-      setAnswer(
-        res.data.answer ||
-        res.data.response ||
-        res.data.result ||
-        JSON.stringify(res.data, null, 2)
-      );
+  async function askAI(text = question) {
+    if (!text.trim() || loading) return;
 
-      setSources(res.data.sources || []);
-    }
+    const userQuestion = text.trim();
 
-    setQuestion(text);
-  } catch (err) {
-    console.error(err);
-    setAnswer("❌ Unable to connect to AI backend.");
-    setSources([]);
-  } finally {
-    setLoading(false);
-  }
-}
+    // Add user message immediately
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: userQuestion,
+      },
+    ]);
 
-  function copyAnswer() {
-    navigator.clipboard.writeText(answer);
-  }
-
-  function clearAll() {
     setQuestion("");
-    setAnswer("");
-    textareaRef.current?.focus();
+    setLoading(true);
+
+    try {
+      const res = await axios.post(`${API}/ask`, {
+        question: userQuestion,
+      });
+
+      let answer;
+
+      if (typeof res.data === "string") {
+        answer = res.data;
+      } else {
+        answer =
+          res.data.answer ||
+          res.data.response ||
+          res.data.result ||
+          "No response available.";
+      }
+
+      // Add AI response
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: answer,
+        },
+      ]);
+    } catch (err) {
+      console.log(err);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Unable to connect to AI.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter" && e.ctrlKey) {
+      e.preventDefault();
+
+      askAI();
+    }
+  }
+
+  function copyMessage(text) {
+    navigator.clipboard.writeText(text);
+  }
+
+  function clearChat() {
+    setMessages([]);
+    setQuestion("");
   }
 
   return (
-    <div className="ai-card">
+    <div className="ai-card" id="ai">
+      {/* Header */}
+
       <div className="ai-header">
-        <Bot size={30} />
+        <div className="ai-icon">
+          <Bot size={28} />
+        </div>
 
         <div>
-          <h3>SPPU AI Study Assistant</h3>
-          <span>🟢 Powered by RAG + AI</span>
+          <h3>SPPU AI Assistant</h3>
+
+          <p>Powered by RAG + AI</p>
         </div>
-      </div>
 
-      <textarea
-        ref={textareaRef}
-        rows={5}
-        placeholder="Ask anything about SPPU..."
-        value={question}
-        maxLength={500}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && e.ctrlKey) {
-            askAI();
-          }
-        }}
-        onChange={(e) => setQuestion(e.target.value)}
-      />
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontSize: 12,
-          marginBottom: 10,
-        }}
-      >
-        <span>Ctrl + Enter to Send</span>
-        <span>{question.length}/500</span>
-      </div>
-
-      <button
-        className="ai-btn"
-        disabled={loading}
-        onClick={() => askAI()}
-      >
-        {loading ? (
-          <>
-            <Loader2 size={18} className="spin" />
-            Thinking...
-          </>
-        ) : (
-          <>
-            <Send size={18} />
-            Ask AI
-          </>
-        )}
-      </button>
-
-      <div className="ai-suggestions">
-        <p>Popular Questions</p>
-
-        {suggestions.map((item) => (
+        {messages.length > 0 && (
           <button
-            key={item}
-            className="suggestion-btn"
-            onClick={() => askAI(item)}
+            className="chat-clear-btn"
+            onClick={clearChat}
+            title="Clear chat"
           >
-            {item}
+            <Trash2 size={17} />
           </button>
-        ))}
+        )}
       </div>
 
-      {answer && (
-        <div
-          className="ai-response"
-          ref={answerRef}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 15,
-            }}
-          >
-            <h4>🤖 AI Response</h4>
+      {/* Chat Area */}
 
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-              }}
-            >
-              <button
-                className="suggestion-btn"
-                onClick={copyAnswer}
-              >
-                <Copy size={16} />
-              </button>
-
-              <button
-                className="suggestion-btn"
-                onClick={clearAll}
-              >
-                <Trash2 size={16} />
-              </button>
+      <div className="ai-chat-area">
+        {messages.length === 0 ? (
+          <div className="ai-welcome">
+            <div className="ai-welcome-icon">
+              <Sparkles size={25} />
             </div>
-          </div>
 
-          <div
-            style={{
-              lineHeight: 1.8,
-            }}
-          >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {answer}
-            </ReactMarkdown>
+            <h3>How can I help you?</h3>
+
+            <p>
+              Ask anything about SPPU question papers, subjects or exam
+              preparation.
+            </p>
           </div>
+        ) : (
+          <div className="message-list">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`chat-message ${
+                  message.role === "user" ? "user-message" : "ai-message"
+                }`}
+              >
+                {message.role === "assistant" && (
+                  <div className="message-avatar">
+                    <Bot size={17} />
+                  </div>
+                )}
+
+                <div className="message-content">
+                  <div className="message-label">
+                    {message.role === "user" ? "You" : "SPPU AI"}
+                  </div>
+
+                  <div className="message-bubble">
+                    {message.role === "assistant" ? (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {message.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <p>{message.content}</p>
+                    )}
+                  </div>
+
+                  {message.role === "assistant" && (
+                    <button
+                      className="message-copy"
+                      onClick={() => copyMessage(message.content)}
+                      title="Copy answer"
+                    >
+                      <Copy size={14} />
+                      Copy
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Thinking */}
+
+            {loading && (
+              <div className="chat-message ai-message">
+                <div className="message-avatar">
+                  <Bot size={17} />
+                </div>
+
+                <div className="message-content">
+                  <div className="message-label">SPPU AI</div>
+
+                  <div className="message-bubble thinking-bubble">
+                    <Loader2 size={17} className="spin" />
+
+                    <span>Thinking...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
+
+      {/* Suggestions */}
+
+      {messages.length === 0 && (
+        <div className="suggestion-list">
+          {suggestions.map((item) => (
+            <button
+              key={item}
+              className="suggestion-chip"
+              onClick={() => askAI(item)}
+            >
+              <Sparkles size={15} />
+
+              {item}
+            </button>
+          ))}
         </div>
       )}
+
+      {/* Input */}
+
+      <div className="ai-input-area">
+        <textarea
+          rows={2}
+          value={question}
+          placeholder="Ask anything about SPPU..."
+          maxLength={500}
+          disabled={loading}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+
+        <button
+          className="ai-send-btn"
+          disabled={loading || !question.trim()}
+          onClick={() => askAI()}
+          title="Send"
+        >
+          {loading ? (
+            <Loader2 size={19} className="spin" />
+          ) : (
+            <Send size={19} />
+          )}
+        </button>
+      </div>
+
+      <div className="chat-info">
+        <span>{question.length}/500</span>
+
+        <span>Ctrl + Enter to send</span>
+      </div>
     </div>
   );
 }
+
+export default AIChat;

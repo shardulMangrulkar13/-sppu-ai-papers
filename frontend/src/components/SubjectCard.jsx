@@ -1,73 +1,67 @@
-import { Eye, Download, Bot, Calendar, GraduationCap, FileText } from "lucide-react";
+import {
+  Eye,
+  Download,
+  Bot,
+  Calendar,
+  GraduationCap,
+  FileText,
+} from "lucide-react";
+
 import { Link } from "react-router-dom";
 
-const API = "http://127.0.0.1:8000";
+const API = "https://sppu-ai-backend-304115043483.asia-south1.run.app";
 
 function SubjectCard({ paper }) {
   if (!paper) return null;
 
-  const filePath = encodeURIComponent(paper.path);
-
   return (
     <div className="paper-card">
-
       <div className="paper-header">
-        <h3>📘 {paper.subject}</h3>
+        <span className="paper-pattern">{paper.pattern}</span>
+
+        <span className="paper-year">{paper.exam_year}</span>
       </div>
 
-      <div className="paper-body">
+      <h3 className="paper-title">{paper.subject}</h3>
 
-        <div className="paper-info">
-          <GraduationCap size={16} />
+      <div className="paper-info">
+        <div className="paper-row">
+          <GraduationCap size={17} />
           <span>{paper.branch}</span>
         </div>
 
-        <div className="paper-info">
-          <Calendar size={16} />
-          <span>{paper.year}</span>
+        <div className="paper-row">
+          <Calendar size={17} />
+          <span>{paper.academic_year}</span>
         </div>
 
-        <div className="paper-info">
-          <FileText size={16} />
-          <span>{paper.pattern}</span>
+        <div className="paper-row">
+          <FileText size={17} />
+          <span>{paper.filename}</span>
         </div>
-
-        <div className="paper-file">
-          📄 {paper.filename}
-        </div>
-
       </div>
 
       <div className="paper-buttons">
-
-        <Link
-          to={`/pdf/${filePath}`}
-          className="preview-btn"
-        >
-          <Eye size={16} />
+        <Link className="preview-btn" to="/pdf" state={{ path: paper.path }}>
+          <Eye size={18} />
           Preview
         </Link>
 
         <a
-          href={`${API}/download?path=${filePath}`}
+          className="download-btn"
+          href={`${API}/download?path=${encodeURIComponent(paper.path)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="download-btn"
         >
-          <Download size={16} />
+          <Download size={18} />
           Download
         </a>
-
-        <Link
-          to={`/pdf/${filePath}`}
-          className="ai-btn"
-        >
-          <Bot size={16} />
-          Ask AI
-        </Link>
-
       </div>
 
+      <Link className="paper-ai-btn" to="/pdf" state={{ path: paper.path }}>
+        <Bot size={18} />
+        Ask AI About This Paper
+      </Link>
     </div>
   );
 }

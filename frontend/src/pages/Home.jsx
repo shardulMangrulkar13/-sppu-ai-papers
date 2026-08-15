@@ -1,311 +1,301 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
+
 import SearchBar from "../components/SearchBar";
 import SubjectCard from "../components/SubjectCard";
 import StatsCard from "../components/statsCard";
 import AIChat from "../components/AIChat";
+import developerImg from "../assets/shardul.JPG";
 
+const API = "https://sppu-ai-backend-304115043483.asia-south1.run.app";
 
-const API = "http://127.0.0.1:8000";
+function Home() {
+  const [papers, setPapers] = useState(() => {
+    const saved = sessionStorage.getItem("sppu-papers");
 
-export default function Home() {
-  const [papers, setPapers] = useState([]);
+    return saved ? JSON.parse(saved) : [];
+  });
+  useEffect(() => {
+    sessionStorage.setItem("sppu-papers", JSON.stringify(papers));
+  }, [papers]);
 
   const [branches, setBranches] = useState([]);
+  const [years, setYears] = useState([]);
   const [patterns, setPatterns] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  const [years, setYears] = useState([]);
 
-  const [filters, setFilters] = useState({
-    branch: "",
-    pattern: "",
-    subject: "",
-    year: "",
+  const [filters, setFilters] = useState(() => {
+    const saved = sessionStorage.getItem("sppu-filters");
+
+    return saved
+      ? JSON.parse(saved)
+      : {
+          branch: "",
+          year: "",
+          pattern: "",
+          subject: "",
+        };
   });
-
+  useEffect(() => {
+    sessionStorage.setItem("sppu-filters", JSON.stringify(filters));
+  }, [filters]);
+  const resultsRef = useRef(null);
   const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
 
   useEffect(() => {
     loadBranches();
   }, []);
 
+  // Branch -> Years
+
   useEffect(() => {
     if (!filters.branch) {
+      setYears([]);
       setPatterns([]);
       setSubjects([]);
-      setYears([]);
+
       return;
     }
-    loadPatterns(filters.branch);
+
+    loadYears(filters.branch);
   }, [filters.branch]);
 
-  useEffect(() => {
-    if (!filters.branch || !filters.pattern) {
-      setSubjects([]);
-      setYears([]);
-      return;
-    }
-    loadSubjects(filters.branch, filters.pattern);
-  }, [filters.branch, filters.pattern]);
+  // Year -> Pattern
 
   useEffect(() => {
-    if (!filters.branch || !filters.pattern || !filters.subject) {
-      setYears([]);
+    if (!filters.year) {
+      setPatterns([]);
+      setSubjects([]);
+
       return;
     }
-    loadYears(filters.branch, filters.pattern, filters.subject);
-  }, [filters.branch, filters.pattern, filters.subject]);
+
+    loadPatterns(filters.branch, filters.year);
+  }, [filters.year]);
+
+  // Pattern -> Subject
+
+  useEffect(() => {
+    if (!filters.pattern) {
+      setSubjects([]);
+
+      return;
+    }
+
+    loadSubjects(filters.branch, filters.year, filters.pattern);
+  }, [filters.pattern]);
 
   async function loadBranches() {
     const res = await axios.get(`${API}/branches`);
+
     setBranches(res.data);
   }
 
-  async function loadPatterns(branch) {
-    const res = await axios.get(`${API}/patterns`, {
-      params: { branch },
-    });
-    setPatterns(res.data);
-  }
-
-  async function loadSubjects(branch, pattern) {
-    const res = await axios.get(`${API}/subjects`, {
-      params: { branch, pattern },
-    });
-    setSubjects(res.data);
-  }
-
-  async function loadYears(branch, pattern, subject) {
+  async function loadYears(branch) {
     const res = await axios.get(`${API}/years`, {
-      params: { branch, pattern, subject },
+      params: {
+        branch,
+      },
     });
+
     setYears(res.data);
   }
 
-  async function handleSearch() {
-    try {
-      setLoading(true);
+  async function loadPatterns(branch, year) {
+    const res = await axios.get(`${API}/patterns`, {
+      params: {
+        branch,
 
+        year,
+      },
+    });
+
+    setPatterns(res.data);
+  }
+
+  async function loadSubjects(branch, year, pattern) {
+    const res = await axios.get(`${API}/subjects`, {
+      params: {
+        branch,
+
+        year,
+
+        pattern,
+      },
+    });
+
+    setSubjects(res.data);
+  }
+
+  async function searchPapers() {
+    setLoading(true);
+
+    try {
       const res = await axios.get(`${API}/papers`, {
         params: filters,
       });
 
       setPapers(res.data);
-      setSearched(true);
+
+      // Wait for React to render the results,
+      // then smoothly scroll to the papers section.
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    } catch (err) {
+      console.log(err);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="home-page">
-
-      {/* ================= HERO ================= */}
-
+    <>
       <section className="hero" id="home">
-
         <div className="hero-left">
+          <span className="hero-tag">
+            AI Powered SPPU Question Paper Platform
+          </span>
 
-          <h1>🎓 SPPU AI Papers</h1>
+          <h1>
+            Search Previous Year
+            <br />
+            Question Papers
+          </h1>
 
           <p>
-            Find, Preview & Download Previous Year Question Papers
-            powered by Artificial Intelligence.
+            Find, preview and download previous year SPPU question papers
+            instantly.
           </p>
 
           <SearchBar
             branches={branches}
-            patterns={patterns}
-            subjects={subjects}
-            years={years}
-            filters={filters}
-            setFilters={setFilters}
-            onSearch={handleSearch}
-          />
 
+            years={years}
+
+            patterns={patterns}
+
+            subjects={subjects}
+
+            filters={filters}
+
+            setFilters={setFilters}
+
+            onSearch={searchPapers}
+          />
         </div>
 
         <div className="hero-right">
           <AIChat />
         </div>
-
       </section>
 
-      {/* ================= STATS ================= */}
-
       <section className="stats-grid">
-
         <StatsCard
           title="Question Papers"
+
           value={papers.length}
+
+          color="#2563eb"
         />
 
         <StatsCard
           title="Branches"
+
           value={branches.length}
+
+          color="#16a34a"
         />
 
         <StatsCard
           title="Subjects"
+
           value={subjects.length}
+
+          color="#f97316"
         />
 
         <StatsCard
-          title="AI Powered"
-          value="Yes"
-        />
+          title="AI Support"
 
+          value="24/7"
+
+          color="#9333ea"
+        />
       </section>
 
-      {/* ================= SEARCH RESULTS ================= */}
-
-      {searched && (
-        <section className="papers-section" id="papers">
-
-          <h2 className="section-title">
-            Search Results ({papers.length})
-          </h2>
-
-          {loading ? (
-            <div className="loading">
-              <h3>Loading...</h3>
-            </div>
-          ) : papers.length === 0 ? (
-            <div className="loading">
-              <h3>No Question Papers Found</h3>
-            </div>
-          ) : (
-            <div className="paper-grid">
-              {papers.map((paper, index) => (
-                <SubjectCard
-                  key={index}
-                  paper={paper}
-                />
-              ))}
-            </div>
-          )}
-
-        </section>
-      )}
-
-            {/* ================= ABOUT ================= */}
-
-      <section className="about-section" id="about">
-
+      <section ref={resultsRef} className="papers-section" id="papers">
         <div className="section-header">
-          <span className="section-tag">ABOUT PROJECT</span>
-          <h2>SPPU AI Papers</h2>
+          <h2>Previous Year Papers</h2>
+
           <p>
-            An AI-powered academic platform built to help Savitribai Phule Pune
-            University students find previous year question papers faster and
-            prepare for exams more efficiently.
+            {papers.length} Result
+            {papers.length !== 1 ? "s" : ""}
           </p>
         </div>
 
-        <div className="about-grid">
+        {loading ? (
+          <h2 className="loading">Loading...</h2>
+        ) : papers.length === 0 ? (
+          <div className="empty-state">
+            <h2>No Papers Found</h2>
 
-          <div className="about-card">
-
-            <h3>🎯 Our Mission</h3>
-
-            <p>
-              We aim to simplify exam preparation by providing a centralized
-              platform where students can search, preview, download and study
-              previous year question papers with the help of Artificial
-              Intelligence.
-            </p>
-
+            <p>Select Branch, Academic Year, Pattern, Subject then Search.</p>
           </div>
+        ) : (
+          <div className="paper-grid">
+            {papers.map((paper, index) => (
+              <SubjectCard
+                key={index}
 
-          <div className="about-card">
-
-            <h3>🚀 Features</h3>
-
-            <ul>
-              <li>AI Study Assistant</li>
-              <li>Smart Question Paper Search</li>
-              <li>PDF Preview</li>
-              <li>Instant Download</li>
-              <li>Branch & Subject Filters</li>
-              <li>Responsive Design</li>
-            </ul>
-
+                paper={paper}
+              />
+            ))}
           </div>
-
-          <div className="about-card">
-
-            <h3>🛠 Tech Stack</h3>
-
-            <div className="tech-stack">
-              <span>React</span>
-              <span>FastAPI</span>
-              <span>Python</span>
-              <span>RAG</span>
-              <span>AI</span>
-              <span>REST API</span>
-            </div>
-
-          </div>
-
-        </div>
-
+        )}
       </section>
 
-      {/* ================= DEVELOPER ================= */}
+      {/* Developer Section */}
 
       <section className="developer-section" id="developer">
-
-        <div className="section-header">
-          <span className="section-tag">DEVELOPER</span>
-          <h2>Meet the Developer</h2>
-          <p>
-            Built with passion to make studying smarter for every SPPU student.
-          </p>
-        </div>
-
         <div className="developer-card">
-
-          <div className="developer-avatar">
-            <span>SM</span>
-          </div>
+          <img
+            src={developerImg}
+            alt="Shardul Mangrulkar"
+            className="developer-image"
+          />
 
           <div className="developer-content">
-
             <h2>Shardul Mangrulkar</h2>
 
-            <h4>Full Stack Developer • AI Developer</h4>
+            <h4>
+              Electronics & Telecommunication Engineering Student | Full Stack
+              AI Developer
+            </h4>
 
             <p>
-              I am an Electronics & Telecommunication Engineering student with a
-              strong interest in Artificial Intelligence, Full Stack
-              Development, and building practical software solutions. SPPU AI
-              Papers was created to make previous year question papers easily
-              accessible and provide AI-powered academic assistance for students.
+              Hi, I'm <strong>Shardul Mangrulkar</strong>, an Electronics &
+              Telecommunication Engineering student and Full Stack AI Developer.
+              I enjoy building AI-powered web applications using React, FastAPI,
+              Python and modern cloud technologies. My goal is to develop
+              practical solutions that help students and solve real-world
+              problems.
             </p>
 
             <div className="skill-list">
-
               <span>Python</span>
-              <span>FastAPI</span>
               <span>React</span>
-              <span>JavaScript</span>
-              <span>RAG</span>
-              <span>REST API</span>
+              <span>FastAPI</span>
               <span>AI</span>
-
+              <span>RAG</span>
+              <span>Google Cloud</span>
+              <span>SQL</span>
             </div>
 
             <div className="social-links">
-
-              <a
-                href="https://github.com/shardulMangrulkar13"
-                target="_blank"
-                rel="noreferrer"
-              >
-                GitHub
-              </a>
-
               <a
                 href="https://www.linkedin.com/in/shardul-mangrulkar"
                 target="_blank"
@@ -314,13 +304,19 @@ export default function Home() {
                 LinkedIn
               </a>
 
+              <a
+                href="https://github.com/shardulMangrulkar13"
+                target="_blank"
+                rel="noreferrer"
+              >
+                GitHub
+              </a>
             </div>
-
           </div>
-
         </div>
-
       </section>
-    </div>
+    </>
   );
 }
+
+export default Home;

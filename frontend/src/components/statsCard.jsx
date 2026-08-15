@@ -1,34 +1,47 @@
-function StatsCard({ title, value, color }) {
-  return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: "20px",
-        padding: "25px",
-        boxShadow: "0 8px 20px rgba(0,0,0,.08)",
-        borderTop: `6px solid ${color}`,
-        transition: "0.3s",
-      }}
-    >
-      <h3
-        style={{
-          color: "#555",
-          fontSize: "18px",
-          marginBottom: "10px",
-        }}
-      >
-        {title}
-      </h3>
+import { FileText, GraduationCap, BookOpen, Bot } from "lucide-react";
 
-      <h1
+function StatsCard({ title, value }) {
+  let Icon = FileText;
+  let color = "#2563eb";
+
+  if (title === "Branches") {
+    Icon = GraduationCap;
+    color = "#16a34a";
+  }
+
+  if (title === "Subjects") {
+    Icon = BookOpen;
+    color = "#f97316";
+  }
+
+  if (title === "AI Support") {
+    Icon = Bot;
+    color = "#9333ea";
+  }
+
+  return (
+    <div className="stat-card">
+      <div
+        className="stat-icon"
         style={{
-          color: color,
-          fontSize: "40px",
-          fontWeight: "bold",
+          background: `${color}15`,
+          color,
         }}
       >
-        {value}
-      </h1>
+        <Icon size={28} />
+      </div>
+
+      <div className="stat-content">
+        <p>{title}</p>
+
+        <h2
+          style={{
+            color,
+          }}
+        >
+          {value}
+        </h2>
+      </div>
     </div>
   );
 }

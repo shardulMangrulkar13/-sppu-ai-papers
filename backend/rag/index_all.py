@@ -1,8 +1,8 @@
-from pathlib import Path
 import traceback
+from pathlib import Path
 
-from rag.extract import extract_text
 from rag.chunk import create_chunks
+from rag.extract import extract_text
 from rag.vectore_store import add_chunks
 
 # backend/
@@ -88,7 +88,7 @@ def get_metadata(pdf: Path):
         "year": exam_year,
         "academic_year": academic_year,
         "filename": pdf.name,
-        "filepath": str(pdf),
+        "filepath": "/".join(pdf.relative_to(DATASET).parts),
     }
 
 

@@ -1,7 +1,9 @@
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from rag.extract import extract_text
 from pathlib import Path
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from rag.clean import clean_text
+from rag.extract import extract_text
 
 # backend/
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -15,13 +17,7 @@ def create_chunks(text: str):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=800,
         chunk_overlap=150,
-        separators=[
-            "\n\n",
-            "\n",
-            ". ",
-            " ",
-            ""
-        ],
+        separators=["\n\n", "\n", ". ", " ", ""],
     )
 
     return splitter.split_text(text)

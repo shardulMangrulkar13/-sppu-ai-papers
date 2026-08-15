@@ -1,38 +1,127 @@
-from rag.vectore_store import search
+import re
+
+from rag.vectore_store import collection, search
 
 
-def retrieve(query: str, top_k: int = 5):
+def extract_question_number(query: str):
     """
-    Retrieve the most relevant chunks from ChromaDB.
-    Removes duplicate chunks and ignores empty results.
+    Detect question numbers such as:
+    Question 1
+    Q1
+    Question 3(a)
+    Q4(b)
     """
 
-    results = search(query, top_k)
+    patterns = [
+        r"\bquestion\s*(\d+)\s*(?:\(\s*([a-z])\s*\))?",
+        r"\bq\s*(\d+)\s*(?:\(\s*([a-z])\s*\))?",
+    ]
 
-    retrieved = []
+    for pattern in patterns:
+
+        match = re.search(pattern, query, re.IGNORECASE)
+
+        if match:
+
+            number = match.group(1)
+            part = match.group(2)
+
+            return number, part
+
+    return None, None
+
+
+def retrieve(query: str, top_k: int = 8, filepath: str | None = None):
+
+    question_number, question_part = extract_question_number(query)
+
+    # -----------------------------------------
+    # Question-number query
+    # -----------------------------------------
+
+    if question_number and filepath:
+
+        result = collection.get(
+            where={"filepath": filepath},
+            include=[
+                "documents",
+                "metadatas",
+            ],
+        )
+
+        documents = result.get("documents", [])
+
+        metadatas = result.get("metadatas", [])
+
+        retrieved = []
+
+        question_patterns = [
+            rf"\bQuestion\s*{question_number}\b",
+            rf"\bQ\s*{question_number}\b",
+            rf"\b{question_number}\s*[\.\)]",
+        ]
+
+        if question_part:
+
+            question_patterns.extend(
+                [
+                    rf"\bQuestion\s*{question_number}\s*\(\s*{question_part}\s*\)",
+                    rf"\bQ\s*{question_number}\s*\(\s*{question_part}\s*\)",
+                ]
+            )
+
+        for doc, meta in zip(documents, metadatas):
+
+            if not doc:
+                continue
+
+            found = False
+
+            for pattern in question_patterns:
+
+                if re.search(pattern, doc, re.IGNORECASE):
+                    found = True
+                    break
+
+            if not found:
+                continue
+
+            retrieved.append(
+                {
+                    "text": doc[:2500],
+                    "metadata": meta,
+                }
+            )
+
+        # If exact question matching worked,
+        # return those chunks.
+        if retrieved:
+
+            return retrieved[:top_k]
+
+    # -----------------------------------------
+    # Normal semantic search
+    # -----------------------------------------
+
+    results = search(query, top_k, filepath)
 
     documents = results.get("documents", [[]])[0]
+
     metadatas = results.get("metadatas", [[]])[0]
+
+    retrieved = []
 
     seen = set()
 
     for doc, meta in zip(documents, metadatas):
 
-        if not doc or not meta:
-            continue
-
-        text = doc.strip()
-
-        if len(text) < 20:
+        if not doc:
             continue
 
         key = (
-            meta.get("subject", ""),
-            meta.get("branch", ""),
-            meta.get("pattern", ""),
-            meta.get("exam", ""),
-            meta.get("year", ""),
-            text[:150]
+            meta.get("subject"),
+            meta.get("exam"),
+            doc[:120],
         )
 
         if key in seen:
@@ -40,44 +129,11 @@ def retrieve(query: str, top_k: int = 5):
 
         seen.add(key)
 
-        retrieved.append({
-            "text": text,
-            "metadata": meta
-        })
+        retrieved.append(
+            {
+                "text": doc[:2500],
+                "metadata": meta,
+            }
+        )
 
     return retrieved
-
-
-if __name__ == "__main__":
-
-    while True:
-
-        query = input("\nAsk Question (type 'exit' to quit): ")
-
-        if query.lower() == "exit":
-            break
-
-        results = retrieve(query)
-
-        print("\n" + "=" * 80)
-
-        if not results:
-            print("No results found.")
-            continue
-
-        for i, item in enumerate(results, start=1):
-
-            meta = item["metadata"]
-
-            print(f"""
-Result {i}
-{"-" * 80}
-Subject : {meta.get("subject")}
-Branch  : {meta.get("branch")}
-Pattern : {meta.get("pattern")}
-Exam    : {meta.get("exam")}
-Year    : {meta.get("year")}
-{"-" * 80}
-
-{item["text"][:1000]}
-""")

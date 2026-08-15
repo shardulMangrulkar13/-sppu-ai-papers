@@ -1,5 +1,6 @@
-import fitz
 from pathlib import Path
+
+import fitz
 
 # backend/
 BASE_DIR = Path(__file__).resolve().parent.parent

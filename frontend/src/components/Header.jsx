@@ -1,8 +1,19 @@
-import { FileText, Home, FileSearch, Bot, Users, Phone } from "lucide-react";
+import { useState } from "react";
+import {
+  GraduationCap,
+  House,
+  FileSearch,
+  Bot,
+  Info,
+  User,
+  Menu,
+  X,
+} from "lucide-react";
 
 function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const scrollToSection = (id) => {
+  function scrollToSection(id) {
     const section = document.getElementById(id);
 
     if (section) {
@@ -10,53 +21,62 @@ function Header() {
         behavior: "smooth",
       });
     }
-  };
+
+    setMenuOpen(false);
+  }
+
+  const navItems = [
+    {
+      id: "home",
+      text: "Home",
+      icon: House,
+    },
+    {
+      id: "papers",
+      text: "Papers",
+      icon: FileSearch,
+    },
+    {
+      id: "about",
+      text: "About",
+      icon: Info,
+    },
+    {
+      id: "developer",
+      text: "Developer",
+      icon: User,
+    },
+  ];
 
   return (
     <header className="header">
+      <div className="logo" onClick={() => scrollToSection("home")}>
+        <div className="logo-icon">
+          <GraduationCap size={28} />
+        </div>
 
-      <div
-        className="logo"
-        style={{ cursor: "pointer" }}
-        onClick={() => scrollToSection("home")}
-      >
-        <FileText size={32} />
-
-        <div>
+        <div className="logo-text">
           <h2>SPPU AI Papers</h2>
-          <p>Question Papers + AI Assistant</p>
+          <span>AI Powered Study Platform</span>
         </div>
       </div>
 
-      <nav>
+      <nav className={menuOpen ? "nav active" : "nav"}>
+        {navItems.map((item) => {
+          const Icon = item.icon;
 
-        <button onClick={() => scrollToSection("home")}>
-          <Home size={18} />
-          Home
-        </button>
-
-        <button onClick={() => scrollToSection("papers")}>
-          <FileSearch size={18} />
-          Papers
-        </button>
-
-        <button onClick={() => scrollToSection("ai")}>
-          <Bot size={18} />
-          AI Assistant
-        </button>
-
-        <button onClick={() => scrollToSection("about")}>
-          <Users size={18} />
-          About
-        </button>
-
-        <button onClick={() => scrollToSection("contact")}>
-          <Phone size={18} />
-          Contact
-        </button>
-
+          return (
+            <button key={item.id} onClick={() => scrollToSection(item.id)}>
+              <Icon size={18} />
+              {item.text}
+            </button>
+          );
+        })}
       </nav>
 
+      <button className="menu-btn" onClick={() => setMenuOpen(!menuOpen)}>
+        {menuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
     </header>
   );
 }
